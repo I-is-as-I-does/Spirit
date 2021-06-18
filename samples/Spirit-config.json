@@ -25,7 +25,8 @@
       "headerText": "PASS",
       "footerText": "ww.some-domain.com/login",
       "mainText":"Bob",
-      "addtTexts":["guest of Ida"]
+      "addtTexts":["guest of Ida"],
+      "drawFrame":true
     },
     "_Ink": {
       "fontFilePath": "../samples/sourcessproxtrlight.ttf",

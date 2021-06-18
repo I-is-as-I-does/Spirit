@@ -40,7 +40,7 @@ class Printer
         return $stegaImage;
     }
 
-    private function StegaData($img, $cryptdata)
+    private function StegaData($rscImg, $cryptdata)
     {
         /* @doc: to maintain a small filesize, just a part of the pass is encoded;
         if more data needs to be injected, full potential is:
@@ -83,10 +83,10 @@ class Printer
     
           $toinject = $this->Sheet->lure1 . $frmt_startpoz . $this->Sheet->lure2 . $frmt_lengtpoz . $hiddendata;
           $cryptdataBin = Utils::toBin($toinject);
-        $img = $this->rewritePx($img, $cryptdataBin);
+        $rscImg = $this->rewritePx($rscImg, $cryptdataBin);
 
-        $out_b64img = Jack::Images()->rsrcTob64png($img);
-        imagedestroy($img);
+        $out_b64img = Jack::Images()->rsrcTob64png($rscImg);
+        imagedestroy($rscImg);
 
         if ($this->Spirit->inTestMode()) {
             $this->testOutput($startpoz, $datalen, $out_b64img);
@@ -95,7 +95,7 @@ class Printer
     }
 
     
-private function rewritePx($img, $cryptdataBin)
+private function rewritePx($rscImg, $cryptdataBin)
 {
 
     $pixelX = 0;
@@ -106,7 +106,7 @@ private function rewritePx($img, $cryptdataBin)
             $pixelY++;
             $pixelX = 0;
         }
-        $rgb = imagecolorat($img, $pixelX, $pixelY); // @doc: color of the pixel at the x and y positions
+        $rgb = imagecolorat($rscImg, $pixelX, $pixelY); // @doc: color of the pixel at the x and y positions
         $r = ($rgb >> 16) & 0xFF;
         $g = ($rgb >> 8) & 0xFF;
         $b = $rgb & 0xFF;
@@ -117,12 +117,12 @@ private function rewritePx($img, $cryptdataBin)
         $binBlue[$leastBit] = $cryptdataBin[$x]; // @doc: change least significant bit with the bit from data
         $newBlue = Utils::toHex($binBlue);
 
-        $new_color = imagecolorallocate($img, $r, $g, $newBlue); // @doc: swap pixel with new pixel that has its blue lsb changed (looks the same)
-        imagesetpixel($img, $pixelX, $pixelY, $new_color); // @doc: set the color at the x and y positions
+        $new_color = imagecolorallocate($rscImg, $r, $g, $newBlue); // @doc: swap pixel with new pixel that has its blue lsb changed (looks the same)
+        imagesetpixel($rscImg, $pixelX, $pixelY, $new_color); // @doc: set the color at the x and y positions
 
         $pixelX++; // @doc: change x coordinates to parent
     }
-    return $img;
+    return $rscImg;
 }
 
     private function testOutput($startpoz, $datalen, $out_b64img)

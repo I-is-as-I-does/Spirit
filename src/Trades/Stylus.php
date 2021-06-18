@@ -28,22 +28,21 @@ class Stylus
         
     }
 
-    public function writeBottom($rscImg, $endx, $text)
+    public function writeTexts($rscImg, $headx, $endx,$texts)
     {
-        imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $endx["xmid"], $this->Sheet->endy, $this->textColor($rscImg), $this->Sheet->fontFile, $text);
-        return $rscImg;
-    }
+        $textColor = $this->textColor($rscImg);
+        if(!empty($texts['headerText'])){
+            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $headx["xmid"], $this->Sheet->heady, $textColor, $this->Sheet->fontFile, $texts['headerText']);
 
-    public function writeTop($rscImg, $headx, $text)
-    {
-        imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $headx["xmid"], $this->Sheet->heady, $this->textColor($rscImg), $this->Sheet->fontFile, $text);
-        return $rscImg;
-    }
+        }
+        if(!empty($texts['footerText'])){
+            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $endx["xmid"], $this->Sheet->endy, $textColor, $this->Sheet->fontFile, $texts['footerText']);
 
-    public function writeCenter($rscImg, $mainText, $addtTexts = [])
-    {
-        $lines = $this->getLines($mainText, $addtTexts);
-        $rscImg = $this->imprint($lines, $rscImg);
+        }
+        if(!empty($texts['mainText']) || !empty($texts['addtTexts'])){
+            $lines = $this->getLines($texts['mainText'], $texts['addtTexts']);
+            $rscImg = $this->imprint($rscImg,$lines, $textcolor);
+        }
         return $rscImg;
     }
 
@@ -69,9 +68,9 @@ class Stylus
         return $lines;
     }
 
-    private function imprint($lines, $rscImg)
+    private function imprint($rscImg,$lines, $textcolor)
     {
-        $textcolor = $this->textColor($rscImg);
+        
         $linescount = count($lines);
 
         /* nicknames inheritance lines */
