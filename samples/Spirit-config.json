@@ -1,19 +1,43 @@
 {
-    "adminKeyHashes":["$2y$10$LCIA2ZcrT4UGwCJ.x34fCOrxNG7mz5B6GGhEmRvfRmAc3sz0ND6Ry"],
-    "fontFilePath":"../samples/sourcessproxtrlight.ttf",
-    "passTitle" : "PASS",
-    "fontSize" : 11,
-    "margin" : 9,
-    "lineSpacer" : 2,
-    "angle" : 0,
-    "width" : 286,
-    "height" : 186,
-    "bgColorCodes" : [255, 255, 255],
-    "lineColorCodes" : [200, 200, 200],
-    "textColorCodes" : [160, 160, 160],
-    "pos_len" : 4,
-    "lure1_bytes": 3,
-    "lure2_bytes": 6,
-    "minfiller_bytes":3,
-    "adtlines":4
+  "keyHash": "$2y$10$LCIA2ZcrT4UGwCJ.x34fCOrxNG7mz5B6GGhEmRvfRmAc3sz0ND6Ry",
+  "Sod": {
+    "cryptKey": "$2y$10$LCIA2ZcrT4UGwCJ.x34fCOrxNG7mz5B6GGhEmRvfRmAc3sz0ND6Ry",
+    "flavour": "Sugar"
+  },
+  "pos_len": 4,
+  "lure1_bytes": 3,
+  "lure2_bytes": 6,
+  "minfiller_bytes": 3,
+  "defaultTemplate": "Simple",
+  "templates": {
+    "_Paper": {
+      "fontFilePath": "../samples/sourcessproxtrlight.ttf",
+      "width": 286,
+      "height": 186,
+      "fontSize": 11,
+      "margin": 9,
+      "lineSpacer": 2,
+      "angle": 0,
+      "bgColorCodes": [255, 255, 255],
+      "lineColorCodes": [160, 160, 160],
+      "textColorCodes": [160, 160, 160],
+      "adtlines": 4,
+      "headerText": "PASS",
+      "footerText": "ww.some-domain.com/login",
+      "mainText":"Bob",
+      "addtTexts":["guest of Ida"]
+    },
+    "_Ink": {
+      "fontFilePath": "../samples/sourcessproxtrlight.ttf",
+      "width": 286,
+      "height": 186,
+      "fontSize": 11,
+      "margin": 9,
+      "lineSpacer": 2,
+      "angle": 0,
+      "textColorCodes": [160, 160, 160],
+      "adtlines": 4,
+      "baseImagePath": "../samples/baseImage.png"
+    }
+  }
 }

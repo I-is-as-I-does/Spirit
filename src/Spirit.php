@@ -3,32 +3,59 @@
 namespace SSITU\Spirit;
 
 use \SSITU\Jack\Jack;
+use \SSITU\Sod\Sod;
 
 class Spirit
 {
     use \SSITU\Copperfield\FacadeOverload;
 
     private $testMode = false;
-    private $errLog = [];
-
     private $Sod;
+
+    private $Templates;
 
     // @doc: model = ['YYYYMMDD','url', 'passtitle', 'username'];
 
     public function __construct($config)
     {
+       
         if (is_array($config)) {
-            $tradesPattern = __DIR__ . '/Trades/*[!(_i)|(_a)].php';
-            $subNameSpace = __NAMESPACE__ . '\Trades';
-            $this->initOverload($config, $tradesPattern, $subNameSpace);
+            $this->initOverload($config);
         } else {
-            $this->errLog[] = 'invalid config';
+            $this->logs[] = 'invalid config';
+        }
+
+        if(!empty($config['Sod']) && !empty($config['Sod']['cryptKey'])){
+            $Sod = new Sod($config['Sod']);
+            $this->setSod($Sod);
+        }
+        if(!empty($config['defaultTemplate'])){
+            $this->setTemplate($config['defaultTemplate']);
         }
     }
 
-    public function addToLog($err)
+    private function getTemplate($templateName)
     {
-        $this->errLog[] = $err;
+       if(array_key_exists($templateName, $this->config['templates'])){
+           if(empty($this->Templates[$templateName])){
+            $className = 'Templates\\'.$templateName;
+            if(!class_exists($className)){
+                $this->logs[] = 'unknown template class';
+                return false;
+            }
+                $tmpltConfig = $this->config['templates'][$templateName];
+
+                $this->Plate()->setConfig($tmpltConfig);
+
+                $template = new $className($this);
+                $template->setConfig($tmpltConfig);
+                $this->Templates[$templateName] = $template;
+                
+            }
+            return $this->Templates[$templateName];
+           }
+       $this->logs[] = 'unknown template';
+       return false;
     }
 
     public function setSod($Sod)
@@ -37,14 +64,45 @@ class Spirit
             $this->Sod = $Sod;
             return true;
         }
-        $this->errLog[] = 'invalid Sod';
+        $this->logs[] = 'invalid Sod';
         return false;
     }
 
-    public function readPassport($img)
+    private function getRscImg($img)
     {
-        if (empty($this->errLog)) {
-           return $this->Reader()->readPassport($img);
+        if(is_file($img)){
+            $img = Jack::Images()->fileTob64($img);
+            if($img === false){
+                return false;
+            }
+        }
+            return Jack::Images()->b64ToRsrc($img);
+    }
+
+    public function readImg($templateName, $img)
+    {
+        if (empty($this->logs)) {
+           $template = $this->getTemplate($templateName);
+           if($template !== false){
+            $rscImg = $this->getRscImg($img);
+            if($rscImg !== false){
+                return $this->Reader()->readImg($rscImg);
+            }
+            $this->logs[] = 'invalid image'; 
+           }
+          
+        }
+        return false;
+    }
+
+    public function printImg($templateName, $dataToInject)
+    {
+        if (empty($this->logs)) {
+            $template = $this->getTemplate($templateName);
+            if($template !== false){
+                $rscImg = $template->getRscImage();
+            return $this->Printer()->printImg($rscImg, $dataToInject);
+            }
         }
         return false;
     }
@@ -59,29 +117,16 @@ class Spirit
        return $this->testMode;
     }
 
-    public function printPassport($accessUrl, $parentNickname, $nextNicknames)
-    {
-        if (empty($this->errLog)) {
-
-            return $this->Printer()->printPassport($accessUrl, $parentNickname, $nextNicknames);
-        }
-        return false;
-    }
-
-    public function getErrLog()
-    {
-        return $this->errLog;
-    }
 
     public function setTestMode($adminKey)
     {
-        foreach ($this->config['adminKeyHashes'] as $hash) {
+        foreach ($this->config['keyHash'] as $hash) {
             if (password_verify($adminKey, $hash)) {
                 $this->testMode = true;
                 return true;
             }
         }
-        $this->errLog[] = 'invalid admin key';
+        $this->logs[] = 'invalid admin key';
         return false;
     }
 
@@ -92,7 +137,7 @@ class Spirit
             if ($lang != 'en' && file_exists('../spirit-manual-en.json')) {
                 $path = '../spirit-manual-en.json';
             } else {
-                $this->errLog[] = 'unable to get manual';
+                $this->logs[] = 'unable to get manual';
                 return false;
             }
         }

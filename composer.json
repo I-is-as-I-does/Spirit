@@ -3,7 +3,7 @@
     "description": "Spirit pass printer",
     "type": "library",
     "keywords" :["php", "steganography"],
-    "homepage":"https://github.com/I-is-as-I-does/spirit",
+    "homepage":"https://github.com/I-is-as-I-does/Spirit",
     "license": "MIT",
     "readme":"README.md",
     "authors": [
@@ -13,12 +13,14 @@
         }
     ],
     "minimum-stability": "stable",
-    "require": { "ssitu/jacktrades": "^2.2",
+    "require": { 
+        "ssitu/copperfield": "^1.1",
+        "ssitu/jacktrades": "^2.2",
         "ssitu/sod": "^1.0"},
    
     "autoload": {
         "psr-4": {
-            "SSITU\\spirit\\": "src"
+            "SSITU\\Spirit\\": "src"
         }
     }
 }

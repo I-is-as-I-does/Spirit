@@ -10,7 +10,7 @@ class Plate
     # common config defaults
     private $width = 286;
     private $height = 186;
-    private $pos_len = 4;
+    private $pos_len = 3;
     private $lure1_bytes = 3;
     private $lure2_bytes = 6;
 
@@ -24,19 +24,32 @@ class Plate
 
     public function __construct($Spirit)
     {
-        foreach (['width', 'height', 'pos_len', 'lure2_bytes', 'lure1_bytes'] as $param) {
+     
+        foreach (['pos_len', 'lure2_bytes', 'lure1_bytes'] as $param) {
             if (Jack::Help()->isPostvInt($Spirit->config($param))) {
                 $this->$param = $Spirit->config($param);
             }
         }
-        $this->encod_limits = ($this->width - 1) * ($this->height / 3);
-        $this->encod_y = $this->height / 3;
-
+        
         $this->lure1_len = Utils::b64length($this->lure1_bytes);
         $this->lure2_len = Utils::b64length($this->lure2_bytes);
         $this->info_len = $this->lure1_len + $this->lure2_len + $this->pos_len * 2;
 
     }
+
+    
+    public function setConfig($config){
+      
+        foreach (['width' 'height'] as $param) {
+            if (!empty($config[$param]) && Jack::Help()->isPostvInt($config[$param])) {
+                $this->$param = $config[$param];
+            }
+        }
+   
+        $this->encod_y = floor($this->height / 3);
+        $this->encod_limits = $this->width * $this->encod_y;      
+   
+}
 
     public function __get($name)
     {

@@ -43,14 +43,11 @@ class Utils
         return ceil($char * 3 / 4);
     }
 
-    public static function b64Img($image)
-    {
-        // @doc: following buffering is required; can't directly base64 encode the img resource
-        ob_start();
-        imagepng($image);
-        $contents = ob_get_contents();
-        ob_end_clean();
-        return "data:image/png;base64," . base64_encode($contents);
-    }
+    public static function b64pad($value, $pad = '=') {
+        while (strlen($value) % 4 > 0) {
+          $value .= $pad;
+        }
+        return $value;
+      }
 
 }
