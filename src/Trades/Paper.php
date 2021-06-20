@@ -2,19 +2,29 @@
 /* This file is part of Spirit | SSITU | (c) 2021 I-is-as-I-does */
 namespace SSITU\Spirit\Trades;
 
-use \SSITU\Jack\Jack;
+use \SSITU\Spirit\Spirit;
 
-class Paper
+class Paper extends Spirit
 {
 
     private $Spirit;
     private $Plate;
     private $Sheet;
 
-    public function __construct($Spirit)
+    protected function __construct($Spirit)
     {
         $this->Spirit = $Spirit;
- 
+
+    }
+    
+   public function getRscImg()
+    {
+        $this->Plate = $this->Spirit->Plate();
+        $this->Sheet = $this->Spirit->Sheet();
+        if ($this->Sheet->useBgImg) {
+            return $this->loadImg();
+        }
+        return $this->makeImg();
 
     }
 
@@ -45,23 +55,12 @@ class Paper
 
     private function loadImg()
     {
-        $img = Jack::Images()->fileToRsc($this->Sheet->bgImgPath);
+        $img = Utils::pathToRsc($this->Sheet->bgImgPath);
         if ($img === false) {
             $this->Spirit->record('invalid-background-image');
             return false;
         }
         return imagescale($img, $this->Plate->width, $this->Plate->height);
-    }
-
-    public function getRscImg()
-    {
-        $this->Plate = $this->Spirit->Plate();
-        $this->Sheet = $this->Spirit->Sheet();
-        if ($this->Sheet->useBgImg) {
-            return $this->loadImg();
-        }
-        return $this->makeImg();
-
     }
 
 }

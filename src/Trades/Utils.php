@@ -5,6 +5,84 @@ namespace SSITU\Spirit\Trades;
 class Utils
 {
 
+    public static function isPostvInt($value)
+    { //  @doc works even if $value is a string-integer
+        return ((is_int($value) || ctype_digit($value)) && (int) $value > 0);
+    }
+
+    public static function b64ToRsrc($dataimg)
+    {
+        if (stripos($dataimg, 'data:image/') === false) {
+            return false;
+        }
+        $dataimg = preg_replace('/^data:image\/[a-z]+;base64/', '', $dataimg);
+        $dataimg = str_replace(' ', '+', $dataimg);
+        $decdimg = base64_decode($dataimg);
+        if ($decdimg !== false) {
+            return imagecreatefromstring($decdimg);
+        }
+        return false;
+    }
+
+    public static function rscTob64($rscImg, $ext)
+    {
+        $ext = strtolower($ext);
+        if ($ext === 'jpg') {
+            $ext = 'jpeg';
+        }
+        // @doc: buffering is required; can't directly base64 encode the img resource
+        ob_start();
+        switch ($ext) {
+            case 'png':
+                imagepng($rscImg);
+                break;
+            case 'gif':
+                imagegif($rscImg);
+                break;
+            case 'webp':
+                imagewebp($rscImg);
+                break;
+            case 'jpeg':
+                imagejpeg($rscImg);
+                break;
+            default:
+                '';
+        }
+        $contents = ob_get_contents();
+        ob_end_clean();
+
+        if (empty($contents)) {
+            return false;
+        }
+        return 'data:image/' . $ext . ';base64,' . base64_encode($contents);
+    }
+
+    public static function pathToRsc($path)
+    {
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        if ($ext === 'jpg') {
+            $ext = 'jpeg';
+        }
+        switch ($ext) {
+            case 'png':
+                $rscImg = imagecreatefrompng($path);
+                break;
+            case 'gif':
+                $rscImg = imagecreatefromgif($path);
+                break;
+            case 'webp':
+                $rscImg = imagecreatefromwebp($path);
+                break;
+            case 'jpeg':
+                $rscImg = imagecreatefromjpeg($path);
+                break;
+            default:
+                $rscImg = false;
+        }
+        return $rscImg;
+
+    }
+
     public static function toBin($str)
     {
         $str = (string) $str;
@@ -26,28 +104,42 @@ class Utils
         return $newstring;
     }
 
-    public static function b64length($bytes)
-    { //padded, aka with eventual ='s at the end (used to round up to a multiple of 4)
-        return ((4 * $bytes / 3) + 3) & ~3;
+    public static function addrandPad($targbytes, $value)
+    {
+        while (strlen($value) < $targbytes) {
+            $a_z = "abcdefghijklmnopqrstuvwxyz";
+            $value .= $a_z[random_int(0, 25)];
+        }
+        return $value;
     }
 
-    public static function randFill($gap)
+    public static function adjustb64($targbytes, $b64)
     {
-        $b64 = base64_encode(random_bytes($gap));
-        $out = str_replace('=', '+', $b64);
-        return $out;
+        $b64 = rtrim($b64, '=');
+        while (strlen($b64) > $targbytes) {
+            $b64 = substr($b64, 0, -1);
+        }
+        return self::addrandPad($targbytes, $b64);
+    }
+
+    public static function randFill($bytes)
+    {
+        $b64 = base64_encode(random_bytes(self::b64bytes($bytes) - 1));
+        return self::adjustb64($bytes, rtrim($b64, '='));
+
     }
 
     public static function b64bytes($char)
     {
-        return ceil($char * 3 / 4);
+        return floor($char * 3 / 4);
     }
 
-    public static function b64pad($value, $pad = '=') {
+    public static function b64pad($value, $pad = '=')
+    {
         while (strlen($value) % 4 > 0) {
-          $value .= $pad;
+            $value .= $pad;
         }
         return $value;
-      }
+    }
 
 }

@@ -1,6 +1,6 @@
 {
     "name": "ssitu/spirit",
-    "description": "Spirit pass printer",
+    "description": "Spirit Printer; steganography for 0 cents a copy!",
     "type": "library",
     "keywords" :["php", "steganography"],
     "homepage":"https://github.com/I-is-as-I-does/Spirit",
@@ -15,7 +15,6 @@
     "minimum-stability": "stable",
     "require": { 
         "ssitu/copperfield": "^1.1",
-        "ssitu/jacktrades": "^2.2",
         "ssitu/sod": "^1.0"},
    
     "autoload": {

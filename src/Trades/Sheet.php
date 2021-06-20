@@ -2,16 +2,16 @@
 /* This file is part of Spirit | SSITU | (c) 2021 I-is-as-I-does */
 namespace SSITU\Spirit\Trades;
 
-use \SSITU\Jack\Jack;
+use \SSITU\Spirit\Spirit;
 
-class Sheet
+class Sheet extends Spirit
 {
 
     private $Spirit;
     private $Plate;
-    private $config;
 
     # create-specific set values
+    private $fillerLimit;
     private $lineHeight;
     private $maxWidth;
     private $maxLines;
@@ -19,9 +19,6 @@ class Sheet
     private $endy;
     private $maskendy;
     private $baseDiff;
-    private $lure1;
-    private $lure2;
-    private $minfiller_len;
     private $y_adjust;
     private $endx;
     private $headx;
@@ -29,8 +26,8 @@ class Sheet
     private $texts = ['headerText' => '', 'footerText' => '', 'mainText' => '', 'addtTexts' => []];
 
     # create-specific defaults
+    private $imgExtension = 'png';
     private $adtlines = 4; //@doc: 4 = header, footer, and line spacers
-    private $minfillerBytes = 3;
     private $fontFilePath = "../samples/sourcessproxtrlight.ttf";
     private $bgImgPath = "../samples/baseImage.png";
     private $fontSize = 11;
@@ -44,10 +41,11 @@ class Sheet
     private $printTexts = true;
     private $useBgImg = false;
 
-    public function __construct($Spirit)
+    private $validExt = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+
+    protected function __construct($Spirit)
     {
         $this->Spirit = $Spirit;
-
     }
 
     public function __get($name)
@@ -60,20 +58,43 @@ class Sheet
     public function setConfig()
     {
         $this->Plate = $this->Spirit->Plate();
-    
+
         if (!is_null($this->Plate->width)) {
 
             $this->prepDrawConfig();
             $this->prepDrawValues();
             return true;
-        } 
+        }
         $this->Spirit->record('invalid-Plate');
-            return false;
-       
+        return false;
+
+    }
+   
+    public function boxDim($input)
+    {
+        //doc: beware, imagettfbbox is often buggy, depending on server running GD
+        $box = imagettfbbox($this->fontSize, $this->angle, $this->fontFilePath, $input);
+        $inputwidth = abs($box[2] - $box[0]);
+        $inputheight = abs($box[7] - $box[1]);
+        return ["w" => $inputwidth, "h" => $inputheight];
+    }
+
+    public function xPoz($input)
+    {
+        $indim = $this->boxDim($input);
+        $xmid = ($this->Plate->width - $indim["w"]) / 2;
+        $out = ["xmid" => $xmid];
+        $out["maskx1"] = $xmid - $this->margin;
+        $out["maskx2"] = $xmid + $indim["w"] + $this->margin;
+        return $out;
     }
 
     private function prepDrawConfig()
     {
+        $imgExtension = $this->Spirit->config('imgExtension');
+        if (in_array($imgExtension, $this->validExt)) {
+            $this->imgExtension = $imgExtension;
+        }
 
         foreach (['fontFilePath', 'bgImgPath'] as $pathParam) {
             $method = 'check' . ucfirst($pathParam);
@@ -83,9 +104,9 @@ class Sheet
             }
         }
 
-        foreach (['fontSize', 'margin', 'lineSpacer', 'minfillerBytes'] as $param) {
+        foreach (['fontSize', 'margin', 'lineSpacer'] as $param) {
             $numbr = $this->Spirit->config($param);
-            if (Jack::Help()->isPostvInt($numbr)) {
+            if (Utils::isPostvInt($numbr)) {
                 $this->$param = $numbr;
             }
         }
@@ -124,7 +145,6 @@ class Sheet
                 $this->$boolParam = $bool;
             }
         }
-
     }
 
     private function checkBgImgPath($path)
@@ -134,7 +154,7 @@ class Sheet
             return false;
         }
 
-        if (!in_array(Jack::File()->getExt($path), ['png', 'jpg', 'jpeg', 'gif', 'webp'])) {
+        if (!in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), $this->validExt)) {
             $this->Spirit->record('invalid  bg img type');
             return false;
         }
@@ -148,7 +168,7 @@ class Sheet
             return false;
         }
 
-        if (Jack::File()->getExt($path) !== 'ttf') {
+        if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) !== 'ttf') {
             $this->Spirit->record('invalid font file type');
             return false;
         }
@@ -163,48 +183,17 @@ class Sheet
 
     private function prepDrawValues()
     {
-
-        $this->minfiller_len = Utils::b64length($this->minfillerBytes);
-
+        $this->fillerLimit = $this->Plate->encod_limits - $this->Plate->minlen;
         $this->lineHeight = $this->fontSize + $this->lineSpacer;
         $this->maxWidth = $this->Plate->width - $this->margin * 2;
-
         $this->maxLines = floor(($this->Plate->height - $this->margin * 2) / $this->lineHeight);
-
         $this->y_adjust = $this->lineSpacer + $this->lineHeight / 2;
-
         $this->baseDiff = $this->maxLines - $this->adtlines;
-
-        $this->lure1 = Utils::randFill($this->Plate->lure1Bytes);
-        $this->lure2 = Utils::randFill($this->Plate->lure2Bytes);
-
         $this->heady = $this->margin + $this->fontSize - $this->lineSpacer / 2;
-
         $this->endy = $this->Plate->height - $this->margin + $this->lineSpacer / 2;
         $this->maskendy = $this->endy - $this->fontSize;
-
         $this->headx = $this->xPoz($this->texts['headerText']);
         $this->endx = $this->xPoz($this->texts['footerText']);
-
-    }
-
-    public function boxDim($input)
-    {
-        //doc: beware, imagettfbbox is often buggy, depending on server running GD
-        $box = imagettfbbox($this->fontSize, $this->angle, $this->fontFilePath, $input);
-        $inputwidth = abs($box[2] - $box[0]);
-        $inputheight = abs($box[7] - $box[1]);
-        return ["w" => $inputwidth, "h" => $inputheight];
-    }
-
-    public function xPoz($input)
-    {
-        $indim = $this->boxDim($input);
-        $xmid = ($this->Plate->width - $indim["w"]) / 2;
-        $out = ["xmid" => $xmid];
-        $out["maskx1"] = $xmid - $this->margin;
-        $out["maskx2"] = $xmid + $indim["w"] + $this->margin;
-        return $out;
     }
 
 }
