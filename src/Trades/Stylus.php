@@ -8,52 +8,40 @@ class Stylus
     private $Spirit;
     private $Plate;
     private $Sheet;
-    private $Sod;
 
-    private $textcolor;
 
     public function __construct($Spirit)
     {
-        $this->Spirit = $Spirit;
-        $this->Plate = $Spirit->Plate();
-        $this->Sheet = $Spirit->Sheet();
+        $this->Spirit = $Spirit;      
     }
 
-   private function textColor($rscImg){
-
-        if(empty($this->textcolor) || empty(imagecolorsforindex($rscImg,$this->Sheet->textColorCodes)){
-            $this->textcolor = imagecolorallocate($rscImg, ...$this->Sheet->textColorCodes);
-        }
-       return $this->textcolor;
-        
-    }
-
-    public function writeTexts($rscImg, $headx, $endx,$texts)
+    public function writeTexts($rscImg)
     {
-        $textColor = $this->textColor($rscImg);
-        if(!empty($texts['headerText'])){
-            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $headx["xmid"], $this->Sheet->heady, $textColor, $this->Sheet->fontFile, $texts['headerText']);
-
+        $this->Plate = $this->Spirit->Plate();
+        $this->Sheet = $this->Spirit->Sheet();
+        var_dump($this->Plate->width);
+        $textColor = imagecolorallocate($rscImg, ...$this->Sheet->textColorCodes);
+     
+        if(!empty($this->Sheet->texts['headerText'])){        
+            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $this->Sheet->headx["xmid"], $this->Sheet->heady, $textColor, $this->Sheet->fontFilePath, $this->Sheet->texts['headerText']);
         }
-        if(!empty($texts['footerText'])){
-            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $endx["xmid"], $this->Sheet->endy, $textColor, $this->Sheet->fontFile, $texts['footerText']);
-
+        if(!empty($this->Sheet->texts['footerText'])){           
+            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $this->Sheet->endx["xmid"], $this->Sheet->endy, $textColor, $this->Sheet->fontFilePath,$this->Sheet->texts['footerText']);
         }
-        if(!empty($texts['mainText']) || !empty($texts['addtTexts'])){
-            $lines = $this->getLines($texts['mainText'], $texts['addtTexts']);
-            $rscImg = $this->imprint($rscImg,$lines, $textcolor);
+        if(!empty($this->Sheet->texts['mainText']) || !empty($this->Sheet->texts['addtTexts'])){
+            $rscImg = $this->imprint($rscImg, $textColor);
         }
         return $rscImg;
     }
 
-    private function getLines($mainText, $addtTexts)
+    private function getLines()
     {
-        $lines = [$mainText];
-        if (!empty($addtTexts)) {
+        $lines = [$this->Sheet->texts['mainText']];
+        if (!empty($this->Sheet->texts['addtTexts'])) {
 
-            $chardim = $this->boxDim('M'); // @doc maj M is considered a good "template"
+            $chardim = $this->Sheet->boxDim('M'); // @doc maj M is considered a good "template"
             $maxchars = floor($this->Sheet->maxWidth / $chardim["w"]);
-            foreach ($addtTexts as $addt) {
+            foreach ($this->Sheet->texts['addtTexts'] as $addt) {
                 $wrapncks = wordwrap($addt, $maxchars);
                 $nlines = explode("\n", $wrapncks);
                 $lines = array_merge($lines, $nlines);
@@ -68,9 +56,9 @@ class Stylus
         return $lines;
     }
 
-    private function imprint($rscImg,$lines, $textcolor)
+    private function imprint($rscImg, $textColor)
     {
-        
+        $lines = $this->getLines();
         $linescount = count($lines);
 
         /* nicknames inheritance lines */
@@ -78,32 +66,13 @@ class Stylus
         $y += $this->Sheet->y_adjust; // @doc: adjustments to get the line bottom y pos.
 
         foreach ($lines as $text) {
-            $solox = $this->xPoz($text);
-            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $solox["xmid"], $y, $textcolor, $this->Sheet->fontFile, $text);
+            $solox = $this->Sheet->xPoz($text);
+            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $solox["xmid"], $y, $textColor, $this->Sheet->fontFilePath, $text);
 
             $y += $this->Sheet->lineHeight;
         }
 
         return $rscImg;
-    }
-
-    private function boxDim($input)
-    {
-        //doc: beware, imagettfbbox is often buggy, depending on server running GD
-        $box = imagettfbbox($this->Sheet->fontSize, $this->Sheet->angle, $this->Sheet->fontFile, $input);
-        $inputwidth = abs($box[2] - $box[0]);
-        $inputheight = abs($box[7] - $box[1]);
-        return ["w" => $inputwidth, "h" => $inputheight];
-    }
-
-    private function xPoz($input)
-    {
-        $indim = $this->boxDim($input);
-        $xmid = ($this->Plate->width - $indim["w"]) / 2;
-        $out = ["xmid" => $xmid];
-        $out["maskx1"] = $xmid - $this->Sheet->margin;
-        $out["maskx2"] = $xmid + $indim["w"] + $this->Sheet->margin;
-        return $out;
     }
 
 }

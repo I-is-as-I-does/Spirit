@@ -2,73 +2,106 @@
 /* This file is part of Spirit | SSITU | (c) 2021 I-is-as-I-does */
 namespace SSITU\Spirit\Trades;
 
+use \SSITU\Jack\Jack;
+
 class Reader
 {
 
     private $Spirit;
     private $Plate;
-    private $Sod;
 
     public function __construct($Spirit)
     {
         $this->Spirit = $Spirit;
+
+    }
+
+    private function getRscImg($img)
+    {
+        if (is_file($img)) {
+            return Jack::Images()->fileToRsc($img);
+        }
+        return Jack::Images()->b64ToRsrc($img);
+    }
+
+
+    private function readSignature($signature)
+    {
+       $signature = base64_decode($signature);
+       $split = explode('$',$signature);
+       $luresBytes = [];
+       foreach(['lure2Bytes', 'lure1Bytes', 'flavourCode'] as $k){
+        $luresBytes[$k] = array_pop($split);
+       }
+       if(array_pop($split) === 1){
+           $flavour = 'Sodium';
+       } else {
+        $flavour = 'Sugar';
+       }
+       $cryptKey = implode('$',$split);
+       if(!$this->Spirit->initSod($cryptKey, $flavour)){
+           return false;
+       }
+       return $luresBytes;
+    }
+
+
+
+    public function readImg($img, $signature)
+    {
+
+        $rscImg = $this->getRscImg($img);
+        if ($rscImg === false) {
+            $this->Spirit->record('invalid-image');
+            return false;
+        }
+
+        $luresBytes = readSignature($signature);
+        if($luresBytes === false){
+            $this->Spirit->record('invalid-signature');
+            return false;
+        }
+      
+        $height = imagesy($rscImg);
+        $width = imagesx($rscImg);
+
         $this->Plate = $Spirit->Plate();
-        $this->Sod = $this->Spirit->getSod();
-
-    }
-
-    private function checkMeasures($rscImg)
-    {
-
-        if (imagesx($rscImg) != $this->Plate->width) {
-            return 'img-has-wrong-width';
-        }
-        if (imagesy($rscImg) != $this->Plate->height) {
-            return 'img-has-wrong-height';
-        }
-        return true;
-    }
-
-    public function readImg($rscImg)
-    {
-        $check = $this->checkMeasures($rscImg);
-        if ($check !== true) {
-            $this->Spirit->record($check);
+        if(!$this->Plate->setConfig($width, $height,$luresBytes['lure1Bytes'],$luresBytes['lure2Bytes'])){
             return false;
         }
 
         $infos = ["startpos" => $this->Plate->lure1_len,
-            "lengthpos" => $this->Plate->info_len - $this->Plate->pos_len,
+            "lengthpos" => $this->Plate->extradata_len - $this->Plate->pos_len,
         ];
 
         foreach ($infos as $pos => $begin) {
-            $raw_pos = $this->extract($img, $this->Plate->pos_len, $begin);
+            $raw_pos = $this->extract($rscImg, $this->Plate->pos_len, $begin);
             $infos[$pos] = preg_replace('/[^\d]/', '', $raw_pos);
         }
 
         //extract data
-        $outdata = $this->extract($img, $infos["lengthpos"], $infos["startpos"]);
+        $outdata = $this->extract($rscImg, $infos["lengthpos"], $infos["startpos"]);
         $valid_outdata = Utils::b64pad($outdata);
 
-        imagedestroy($img);
+        imagedestroy($rscImg);
 
-        $decrypt = $this->Sod->decrypt($valid_outdata);
+        $Sod = $this->Spirit->getSod();
+        $decrypt = $Sod->decrypt($valid_outdata);
         if ($decrypt === false) {
-            $this->Spirit->record($this->Sod->getLogs()[0]);
+            $this->Spirit->record($Sod->getLogs()[0]);
             return false;
         }
 
-        if ($this->Spirit->inTestMode()) {
-            $this->testOutput($decrypt, $infos["startpos"], $infos["lengthpos"]);
-        }
         return $decrypt;
     }
 
-    private function extract($img, $pile, $strt)
+  
+
+    private function extract($rscImg, $pile, $strt)
     {
 
         $pixelX = $strt * 8;
-        $pixelY = $this->Plate->encod_y;
+        $pixelY = 0;
 
         $stop = $pile * 8;
 
@@ -84,7 +117,7 @@ class Reader
                 $pixelY++;
                 $pixelX = 0;
             }
-            $rgb = imagecolorat($img, $pixelX, $pixelY); // @doc: color of the pixel at the x and y positions
+            $rgb = imagecolorat($rscImg, $pixelX, $pixelY); // @doc: color of the pixel at the x and y positions
             $b = $rgb & 0xFF;
 
             $binBlue = Utils::toBin($b);
@@ -99,12 +132,6 @@ class Reader
 
             $pixelX++; // @doc: change x coordinates to next
         }
-    }
-
-    private function testOutput($decrypt, $startpos, $lenghtpos)
-    {
-//@doc: for testing purposes:
-        echo implode('<br>', ['start position: ' . $startpos, 'data length: ' . $lenghtpos, 'decrypted data: ' . $decrypt]);
     }
 
 }

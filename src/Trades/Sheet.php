@@ -15,25 +15,34 @@ class Sheet
     private $lineHeight;
     private $maxWidth;
     private $maxLines;
-
-    private $textcolor;
-
+    private $heady;
+    private $endy;
+    private $maskendy;
     private $baseDiff;
     private $lure1;
     private $lure2;
     private $minfiller_len;
     private $y_adjust;
+    private $endx;
+    private $headx;
+
+    private $texts = ['headerText' => '', 'footerText' => '', 'mainText' => '', 'addtTexts' => []];
 
     # create-specific defaults
     private $adtlines = 4; //@doc: 4 = header, footer, and line spacers
-    private $minfiller_bytes = 3;
-    private $fontFile = "../samples/sourcessproxtrlight.ttf";
-
+    private $minfillerBytes = 3;
+    private $fontFilePath = "../samples/sourcessproxtrlight.ttf";
+    private $bgImgPath = "../samples/baseImage.png";
     private $fontSize = 11;
     private $margin = 9;
     private $lineSpacer = 2;
     private $angle = 0;
     private $textColorCodes = [160, 160, 160];
+    private $bgColorCodes = [255, 255, 255];
+    private $lineColorCodes = [200, 200, 200];
+    private $drawFrame = true;
+    private $printTexts = true;
+    private $useBgImg = false;
 
     public function __construct($Spirit)
     {
@@ -48,47 +57,91 @@ class Sheet
         }
     }
 
-    public function setConfig($config)
+    public function setConfig()
     {
         $this->Plate = $this->Spirit->Plate();
+    
+        if (!is_null($this->Plate->width)) {
 
-        $this->config = $config;
-
-        $this->prepDrawConfig();
-        $this->prepDrawValues();
-
+            $this->prepDrawConfig();
+            $this->prepDrawValues();
+            return true;
+        } 
+        $this->Spirit->record('invalid-Plate');
+            return false;
+       
     }
 
     private function prepDrawConfig()
     {
 
-        if (!empty($this->config['fontFilePath']) && $this->checkFontFile($this->config['fontFilePath'])) {
-            $this->fontFile = $this->config['fontFilePath'];
-        }
-
-        foreach (['fontSize', 'margin', 'lineSpacer', 'minfiller_bytes'] as $param) {
-            if (!empty($this->config[$param]) && Jack::Help()->isPostvInt($this->config[$param])) {
-                $this->$param = $this->config[$param];
+        foreach (['fontFilePath', 'bgImgPath'] as $pathParam) {
+            $method = 'check' . ucfirst($pathParam);
+            $path = $this->Spirit->config($pathParam);
+            if ($this->$method($path)) {
+                $this->$pathParam = $path;
             }
         }
 
-        if (!empty($this->config['angle']) && is_int($this->config['angle'])) {
-            $this->angle = $this->config['angle'];
+        foreach (['fontSize', 'margin', 'lineSpacer', 'minfillerBytes'] as $param) {
+            $numbr = $this->Spirit->config($param);
+            if (Jack::Help()->isPostvInt($numbr)) {
+                $this->$param = $numbr;
+            }
         }
 
-        if (!empty($this->config['adtlines']) && is_int($this->config['adtlines']) && $this->config['adtlines'] >= 2) {
-            $this->adtlines = $this->config['adtlines'];
+        $angle = $this->Spirit->config('angle');
+        if (is_int($angle)) {
+            $this->angle = $angle;
         }
-        if (!empty($this->config['textColorCodes'])) {
-            $textColorCodes = $this->config['textColorCodes'];
-            if (is_array($textColorCodes) && count($textColorCodes) === 3 && array_filter($textColorCodes, 'is_int') === $textColorCodes) {
-                $this->textColorCodes = $textColorCodes;
+
+        $adtlines = $this->Spirit->config('adtlines');
+        if (is_int($adtlines) && $adtlines >= 2) {
+            $this->adtlines = $adtlines;
+        }
+
+        foreach (['headerText', 'footerText', 'mainText'] as $tparam) {
+            $text = $this->Spirit->config($tparam);
+            if (is_string($text)) {
+                $this->texts[$tparam] = $text;
+            }
+        }
+        $adtTexts = $this->Spirit->config('addtTexts');
+        if (is_array($adtTexts)) {
+            $this->texts['addtTexts'] = $adtTexts;
+        }
+
+        foreach (['bgColorCodes', 'lineColorCodes', 'textColorCodes'] as $colorparam) {
+            $colors = $this->Spirit->config($colorparam);
+            if (is_array($colors) && count($colors) === 3 && array_filter($colors, 'is_int') === $colors) {
+                $this->$colorparam = $colors;
+            }
+        }
+
+        foreach (['drawFrame', 'printTexts', 'useBgImg'] as $boolParam) {
+            $bool = $this->Spirit->config($boolParam);
+            if (is_bool($bool)) {
+                $this->$boolParam = $bool;
             }
         }
 
     }
 
-    private function checkFontFile($path)
+    private function checkBgImgPath($path)
+    {
+        if (!file_exists($path)) {
+            $this->Spirit->record('invalid bg img path');
+            return false;
+        }
+
+        if (!in_array(Jack::File()->getExt($path), ['png', 'jpg', 'jpeg', 'gif', 'webp'])) {
+            $this->Spirit->record('invalid  bg img type');
+            return false;
+        }
+        return true;
+    }
+
+    private function checkFontFilePath($path)
     {
         if (!file_exists($path)) {
             $this->Spirit->record('invalid font file path');
@@ -111,7 +164,7 @@ class Sheet
     private function prepDrawValues()
     {
 
-        $this->minfiller_len = Utils::b64length($this->minfiller_bytes);
+        $this->minfiller_len = Utils::b64length($this->minfillerBytes);
 
         $this->lineHeight = $this->fontSize + $this->lineSpacer;
         $this->maxWidth = $this->Plate->width - $this->margin * 2;
@@ -122,8 +175,36 @@ class Sheet
 
         $this->baseDiff = $this->maxLines - $this->adtlines;
 
-        $this->lure1 = Utils::randFill($this->Plate->lure1_bytes);
-        $this->lure2 = Utils::randFill($this->Plate->lure2_bytes);
+        $this->lure1 = Utils::randFill($this->Plate->lure1Bytes);
+        $this->lure2 = Utils::randFill($this->Plate->lure2Bytes);
+
+        $this->heady = $this->margin + $this->fontSize - $this->lineSpacer / 2;
+
+        $this->endy = $this->Plate->height - $this->margin + $this->lineSpacer / 2;
+        $this->maskendy = $this->endy - $this->fontSize;
+
+        $this->headx = $this->xPoz($this->texts['headerText']);
+        $this->endx = $this->xPoz($this->texts['footerText']);
+
+    }
+
+    public function boxDim($input)
+    {
+        //doc: beware, imagettfbbox is often buggy, depending on server running GD
+        $box = imagettfbbox($this->fontSize, $this->angle, $this->fontFilePath, $input);
+        $inputwidth = abs($box[2] - $box[0]);
+        $inputheight = abs($box[7] - $box[1]);
+        return ["w" => $inputwidth, "h" => $inputheight];
+    }
+
+    public function xPoz($input)
+    {
+        $indim = $this->boxDim($input);
+        $xmid = ($this->Plate->width - $indim["w"]) / 2;
+        $out = ["xmid" => $xmid];
+        $out["maskx1"] = $xmid - $this->margin;
+        $out["maskx2"] = $xmid + $indim["w"] + $this->margin;
+        return $out;
     }
 
 }

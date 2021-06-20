@@ -1,50 +1,70 @@
 <?php
 use SSITU\Jack\Jack;
-use SSITU\Sod\Sod;
 use SSITU\Spirit\Spirit;
 
 require_once dirname(__DIR__, 3) . '/app/vendor/autoload.php';
 
-// To generate a key:
-# Jack::Token()->hexBytes(32);
-// And a hash: 
-# Jack::Admin()->hashAdminKey($key);
+// Initiating Spirit:
+$Spirit = new Spirit();
 
-$key = '266aaf895e788903045e38956ca5b1e96bfc6ec8cd4b7c42be466d8f53fba765'; 
+// Loading default print config (could also be a php array; or loaded from a .env file; as preferred):
+$printConfig = Jack::File()->readJson(__DIR__ . '/Spirit-printConfig.json');
 
-$spiritConfig = Jack::File()->readJson(__DIR__ . '/Spirit.json');
-$Spirit = new Spirit($spiritConfig);
-
-$sodConfig = [
-    "adminKeyHashes" => $spiritConfig["adminKeyHashes"],
-    "flavour" => "Sugar"]; # prefer Sodium if installed
-$Sod = new Sod($sodConfig);
-$Sod->setCryptKey($key);
-
-$Spirit->setSod($Sod);
-$Spirit->setTestMode($key);
-
-$accessUrl = 'www.ssitu.com/door';
-$username = 'Bob';
-$addtLines = ['guest of Ida'];
-
-$secret = 'FseS3QeD3CD@s&XU0%Wv$O4^53vUT&9b';
-
-echo '<h2>Print Passport</h2>';
-$b64Img = $Spirit->printPassport($secret, $accessUrl, $username, $addtLines);
-echo '<h2>Reading above Passport</h2>';
-$Spirit->readPassport($b64Img, $secret, $accessUrl, $username);
+// Completing or modifying config:
+$printConfig["cryptKey"] = '703af4dd03ebe11e35167157a8a697d8a2cb545a907a38289f8a7ba19432a342';
+$printConfig["flavour"] = "Sugar"; # prefer Sodium if installed
 
 
-echo '<h2>Previsouly saved Passport</h2>';
+// Data to inject must be a string,
+// and its encrypted copy must fit in specified image dimensions;
+// Spirit returns false and log error if that's not the case
+$dataToInject = 'While doubting thus his dogs espied him there:
+first Blackfoot and the sharp nosed Tracer raised
+the signal: Tracer of the Gnossian breed,
+and Blackfoot of the Spartan: swift as wind
+the others followed. Glutton, Quicksight, Surefoot,
+three dogs of Arcady; then valiant Killbuck,
+Tempest, fierce Hunter, and the rapid Wingfoot;
+sharp-scented Chaser, and Woodranger wounded
+so lately by a wild boar; savage Wildwood,
+the wolf-begot with Shepherdess the cow-dog;
+and ravenous Harpy followed by her twin whelps;
+and thin-girt Ladon chosen from Sicyonia;
+racer and Barker, brindled Spot and Tiger;
+sturdy old Stout and white haired Blanche and black Smut
+lusty big Lacon, trusty Storm and Quickfoot;
+active young Wolfet and her Cyprian brother
+black headed Snap, blazed with a patch of white hair
+from forehead to his muzzle; swarthy Blackcoat
+and shaggy Bristle, Towser and Wildtooth,
+his sire of Dicte and his dam of Lacon;
+and yelping Babbler: these and others, more
+than patience leads us to recount or name.';
+
+// $modifiers = ["useBgImg" => true, "addtTexts" => [], "mainText" => "", "headerText" => "", "footerText" => date('Y-m-d')];
+
+// Printing image:
+$printRslt = $Spirit->printImg($dataToInject, $printConfig);
+// returns 'image' (b64 format) and 'signature'; 
+echo '<h2>Fresh Print</h2>';
+echo '<a href="'.$printRslt['image'].'" download="spirit-image.png"><img src="'.$printRslt['image'].'"></a>';
+echo '<h2>Signature</h2>';
+echo '<p>Signature is REQUIRED for future decryption;<br>';
+echo 'it is only given at this one occasion;<br>';
+echo 'STORE IT in a safe place; DO NOT display it publicly</p>';
+echo '<p>'.$printRslt['signature'].'</p>';
+
+// Reading image ($img can be either a filepath, or a base64 data image)
+echo '<h2>Extracting Data from Fresh Print</h2>';
+//echo $Spirit->readImg($printRslt['image'], $printRslt['signature']);
+
+echo '<h2>Stored Print</h2>';
 echo '<img src="./pass.png">';
-echo '<h2>Reading said Passport File</h2>';
-$b64Img2 = Jack::Images()->fileTob64(__DIR__.'/pass.png');
-$Spirit->readPassport($b64Img2, $secret, $accessUrl, $username);
+echo '<h2>Extracting Data from Stored Print</h2>';
+//$Spirit->readImg(__DIR__ . '/pass.png');
 
 $logs = $Spirit->getLogs();
-if(!empty($logs)){
-
+if (!empty($logs)) {
     echo '<h2>Logs</h2>';
-    echo json_encode($logs,JSON_PRETTY_PRINT);
+    echo json_encode($logs, JSON_PRETTY_PRINT);
 }
