@@ -9,6 +9,8 @@ Spirit Printer; steganography for 0 cents a copy!
 $ composer require ssitu/spirit
 ```
 
+Also requires Gd library enabled.
+
 ## How to 
 
 Demo available in `samples/`.
