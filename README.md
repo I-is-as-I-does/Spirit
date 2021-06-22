@@ -81,6 +81,8 @@ $Spirit->getLogs();
 
 ## Doc
 
+![Spirit Duplicator](Spirit.jpg)
+
 Please note that Spirit has NOT been extensively tested; therefore, consider it a toy.  
 
 SSITU/Sod, or another encryption util – as long as it implements the same interface, is REQUIRED to run Spirit.  
@@ -109,4 +111,3 @@ Sure! You can take a loot at [CONTRIBUTING](CONTRIBUTING.md).
 
 This project is under the MIT License; cf. [LICENSE](LICENSE) for details.
 
-![Spirit Duplicator](Spirit.jpg)
