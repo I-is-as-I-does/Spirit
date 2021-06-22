@@ -2,34 +2,26 @@
 /* This file is part of Spirit | SSITU | (c) 2021 I-is-as-I-does */
 namespace SSITU\Spirit\Trades;
 
-use \SSITU\Spirit\Spirit;
-
-class Stylus extends Spirit
+class Stylus
 {
+    private $Printer;
 
-    private $Spirit;
-    private $Plate;
-    private $Sheet;
-
-    protected function __construct($Spirit)
+    public function __construct($Printer)
     {
-        $this->Spirit = $Spirit;
+        $this->Printer = $Printer;
     }
 
     public function writeTexts($rscImg)
     {
-        $this->Plate = $this->Spirit->Plate();
-        $this->Sheet = $this->Spirit->Sheet();
+        $textColor = imagecolorallocate($rscImg, ...$this->Printer->textColorCodes);
 
-        $textColor = imagecolorallocate($rscImg, ...$this->Sheet->textColorCodes);
-
-        if (!empty($this->Sheet->texts['headerText'])) {
-            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $this->Sheet->headx["xmid"], $this->Sheet->heady, $textColor, $this->Sheet->fontFilePath, $this->Sheet->texts['headerText']);
+        if (!empty($this->Printer->texts['headerText'])) {
+            imagettftext($rscImg, $this->Printer->fontSize, $this->Printer->angle, $this->Printer->headx["xmid"], $this->Printer->heady, $textColor, $this->Printer->fontFilePath, $this->Printer->texts['headerText']);
         }
-        if (!empty($this->Sheet->texts['footerText'])) {
-            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $this->Sheet->endx["xmid"], $this->Sheet->endy, $textColor, $this->Sheet->fontFilePath, $this->Sheet->texts['footerText']);
+        if (!empty($this->Printer->texts['footerText'])) {
+            imagettftext($rscImg, $this->Printer->fontSize, $this->Printer->angle, $this->Printer->endx["xmid"], $this->Printer->endy, $textColor, $this->Printer->fontFilePath, $this->Printer->texts['footerText']);
         }
-        if (!empty($this->Sheet->texts['mainText']) || !empty($this->Sheet->texts['addtTexts'])) {
+        if (!empty($this->Printer->texts['mainText']) || !empty($this->Printer->texts['addtTexts'])) {
             $rscImg = $this->imprint($rscImg, $textColor);
         }
         return $rscImg;
@@ -37,17 +29,17 @@ class Stylus extends Spirit
 
     private function getLines()
     {
-        $lines = [$this->Sheet->texts['mainText']];
-        if (!empty($this->Sheet->texts['addtTexts'])) {
+        $lines = [$this->Printer->texts['mainText']];
+        if (!empty($this->Printer->texts['addtTexts'])) {
 
-            $chardim = $this->Sheet->boxDim('M'); // @doc maj M is considered a good "template"
-            $maxchars = floor($this->Sheet->maxWidth / $chardim["w"]);
-            foreach ($this->Sheet->texts['addtTexts'] as $addt) {
+            $chardim = $this->Printer->boxDim('M'); // @doc maj M is considered a good "template"
+            $maxchars = floor($this->Printer->maxWidth / $chardim["w"]);
+            foreach ($this->Printer->texts['addtTexts'] as $addt) {
                 $wrapncks = wordwrap($addt, $maxchars);
                 $nlines = explode("\n", $wrapncks);
                 $lines = array_merge($lines, $nlines);
             }
-            $maxdiff = $this->Sheet->baseDiff - count($lines);
+            $maxdiff = $this->Printer->baseDiff - count($lines);
             if ($maxdiff < 0) {
                 $lines = array_slice($lines, 0, $maxdiff);
                 $lastline = trim(array_pop($lines)) . ' [...]';
@@ -62,13 +54,13 @@ class Stylus extends Spirit
         $lines = $this->getLines();
         $linescount = count($lines);
 
-        $y = ($this->Plate->height - $linescount * $this->Sheet->lineHeight) / 2; //@doc: y pos. of the middle of 1st line
-        $y += $this->Sheet->y_adjust; // @doc: adjustments to get the line bottom y pos.
+        $y = ($this->Printer->height - $linescount * $this->Printer->lineHeight) / 2; //@doc: y pos. of the middle of 1st line
+        $y += $this->Printer->y_adjust; // @doc: adjustments to get the line bottom y pos.
 
         foreach ($lines as $text) {
-            $solox = $this->Sheet->xPoz($text);
-            imagettftext($rscImg, $this->Sheet->fontSize, $this->Sheet->angle, $solox["xmid"], $y, $textColor, $this->Sheet->fontFilePath, $text);
-            $y += $this->Sheet->lineHeight;
+            $solox = $this->Printer->xPoz($text);
+            imagettftext($rscImg, $this->Printer->fontSize, $this->Printer->angle, $solox["xmid"], $y, $textColor, $this->Printer->fontFilePath, $text);
+            $y += $this->Printer->lineHeight;
         }
 
         return $rscImg;

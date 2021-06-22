@@ -104,32 +104,30 @@ class Utils
         return $newstring;
     }
 
-    public static function addrandPad($targbytes, $value)
+    public static function addrandPad($targLen, $str)
     {
-        while (strlen($value) < $targbytes) {
+        while (strlen($str) < $targLen) {
             $a_z = "abcdefghijklmnopqrstuvwxyz";
-            $value .= $a_z[random_int(0, 25)];
+            $str .= $a_z[random_int(0, 25)];
         }
-        return $value;
+        return $str;
     }
 
-    public static function adjustb64($targbytes, $b64)
+    public static function adjustLen($targLen, $str)
     {
-        $b64 = rtrim($b64, '=');
-        while (strlen($b64) > $targbytes) {
-            $b64 = substr($b64, 0, -1);
+        while (strlen($str) > $targLen) {
+            $str = substr($str, 0, -1);
         }
-        return self::addrandPad($targbytes, $b64);
+        return self::addrandPad($targLen, $str);
     }
 
-    public static function randFill($bytes)
+    public static function randFill($targLen)
     {
-        $b64 = base64_encode(random_bytes(self::b64bytes($bytes) - 1));
-        return self::adjustb64($bytes, rtrim($b64, '='));
+       $b64 = base64_encode(random_bytes(self::b64Len($targLen)));
+       return self::adjustLen($targLen, rtrim($b64,'='));
+       }
 
-    }
-
-    public static function b64bytes($char)
+    public static function b64Len($char)
     {
         return floor($char * 3 / 4);
     }

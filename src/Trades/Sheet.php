@@ -2,15 +2,9 @@
 /* This file is part of Spirit | SSITU | (c) 2021 I-is-as-I-does */
 namespace SSITU\Spirit\Trades;
 
-use \SSITU\Spirit\Spirit;
-
-class Sheet extends Spirit
+trait Sheet
 {
-
-    private $Spirit;
-    private $Plate;
-
-    # create-specific set values
+    private $pxLimit;
     private $fillerLimit;
     private $lineHeight;
     private $maxWidth;
@@ -22,10 +16,11 @@ class Sheet extends Spirit
     private $y_adjust;
     private $endx;
     private $headx;
+    private $minlen;
 
+    # defaults
     private $texts = ['headerText' => '', 'footerText' => '', 'mainText' => '', 'addtTexts' => []];
-
-    # create-specific defaults
+    private $minfillerLen = 32;
     private $imgExtension = 'png';
     private $adtlines = 4; //@doc: 4 = header, footer, and line spacers
     private $fontFilePath = "../samples/sourcessproxtrlight.ttf";
@@ -43,36 +38,9 @@ class Sheet extends Spirit
 
     private $validExt = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
 
-    protected function __construct($Spirit)
-    {
-        $this->Spirit = $Spirit;
-    }
-
-    public function __get($name)
-    {
-        if (property_exists($this, $name)) {
-            return $this->$name;
-        }
-    }
-
-    public function setConfig()
-    {
-        $this->Plate = $this->Spirit->Plate();
-
-        if (!is_null($this->Plate->width)) {
-
-            $this->prepDrawConfig();
-            $this->prepDrawValues();
-            return true;
-        }
-        $this->Spirit->record('invalid-Plate');
-        return false;
-
-    }
-   
     public function boxDim($input)
     {
-        //doc: beware, imagettfbbox is often buggy, depending on server running GD
+        //@doc: beware, imagettfbbox is often buggy, depending on server running GD
         $box = imagettfbbox($this->fontSize, $this->angle, $this->fontFilePath, $input);
         $inputwidth = abs($box[2] - $box[0]);
         $inputheight = abs($box[7] - $box[1]);
@@ -82,65 +50,79 @@ class Sheet extends Spirit
     public function xPoz($input)
     {
         $indim = $this->boxDim($input);
-        $xmid = ($this->Plate->width - $indim["w"]) / 2;
+        $xmid = ($this->width - $indim["w"]) / 2;
         $out = ["xmid" => $xmid];
         $out["maskx1"] = $xmid - $this->margin;
         $out["maskx2"] = $xmid + $indim["w"] + $this->margin;
         return $out;
     }
 
-    private function prepDrawConfig()
+    private function setSheetParam()
     {
-        $imgExtension = $this->Spirit->config('imgExtension');
+        $this->prepPrintParam();
+        $this->prepPrintValues();
+
+        if ($this->minlen + 1 >  $this->pxLimit) {
+            $this->Spirit->record('image-is-too-small');
+            return false;
+        }
+        return true;
+    }
+
+    private function prepPrintParam()
+    {
+
+        $imgExtension = $this->config['imgExtension'];
         if (in_array($imgExtension, $this->validExt)) {
             $this->imgExtension = $imgExtension;
         }
 
         foreach (['fontFilePath', 'bgImgPath'] as $pathParam) {
             $method = 'check' . ucfirst($pathParam);
-            $path = $this->Spirit->config($pathParam);
+            $path = $this->config[$pathParam];
             if ($this->$method($path)) {
                 $this->$pathParam = $path;
             }
         }
 
-        foreach (['fontSize', 'margin', 'lineSpacer'] as $param) {
-            $numbr = $this->Spirit->config($param);
+        foreach (['fontSize', 'margin', 'lineSpacer', 'minfillerLen'] as $param) {
+            $numbr = $this->config[$param];
             if (Utils::isPostvInt($numbr)) {
                 $this->$param = $numbr;
             }
         }
 
-        $angle = $this->Spirit->config('angle');
+        $angle = $this->config['angle'];
         if (is_int($angle)) {
             $this->angle = $angle;
         }
 
-        $adtlines = $this->Spirit->config('adtlines');
+        $adtlines = $this->config['adtlines'];
         if (is_int($adtlines) && $adtlines >= 2) {
             $this->adtlines = $adtlines;
         }
 
         foreach (['headerText', 'footerText', 'mainText'] as $tparam) {
-            $text = $this->Spirit->config($tparam);
+            $text = $this->config[$tparam];
             if (is_string($text)) {
                 $this->texts[$tparam] = $text;
             }
         }
-        $adtTexts = $this->Spirit->config('addtTexts');
+
+        $adtTexts = $this->config['addtTexts'];
         if (is_array($adtTexts)) {
             $this->texts['addtTexts'] = $adtTexts;
         }
 
         foreach (['bgColorCodes', 'lineColorCodes', 'textColorCodes'] as $colorparam) {
-            $colors = $this->Spirit->config($colorparam);
+            $colors = $this->config[$colorparam];
             if (is_array($colors) && count($colors) === 3 && array_filter($colors, 'is_int') === $colors) {
                 $this->$colorparam = $colors;
             }
         }
 
         foreach (['drawFrame', 'printTexts', 'useBgImg'] as $boolParam) {
-            $bool = $this->Spirit->config($boolParam);
+            $bool = $this->config[$boolParam];
             if (is_bool($bool)) {
                 $this->$boolParam = $bool;
             }
@@ -155,7 +137,7 @@ class Sheet extends Spirit
         }
 
         if (!in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), $this->validExt)) {
-            $this->Spirit->record('invalid  bg img type');
+            $this->Spirit->record('invalid bg img type');
             return false;
         }
         return true;
@@ -181,16 +163,18 @@ class Sheet extends Spirit
         return true;
     }
 
-    private function prepDrawValues()
+    private function prepPrintValues()
     {
-        $this->fillerLimit = $this->Plate->encod_limits - $this->Plate->minlen;
+        $this->pxLimit = ceil($this->encod_limits/8);
+        $this->minlen = $this->poslen + ($this->minfillerLen * 2);
+        $this->fillerLimit = $this->pxLimit - $this->minlen;
         $this->lineHeight = $this->fontSize + $this->lineSpacer;
-        $this->maxWidth = $this->Plate->width - $this->margin * 2;
-        $this->maxLines = floor(($this->Plate->height - $this->margin * 2) / $this->lineHeight);
+        $this->maxWidth = $this->width - $this->margin * 2;
+        $this->maxLines = floor(($this->height - $this->margin * 2) / $this->lineHeight);
         $this->y_adjust = $this->lineSpacer + $this->lineHeight / 2;
         $this->baseDiff = $this->maxLines - $this->adtlines;
         $this->heady = $this->margin + $this->fontSize - $this->lineSpacer / 2;
-        $this->endy = $this->Plate->height - $this->margin + $this->lineSpacer / 2;
+        $this->endy = $this->height - $this->margin + $this->lineSpacer / 2;
         $this->maskendy = $this->endy - $this->fontSize;
         $this->headx = $this->xPoz($this->texts['headerText']);
         $this->endx = $this->xPoz($this->texts['footerText']);

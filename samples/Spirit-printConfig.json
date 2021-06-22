@@ -3,7 +3,7 @@
   "width": 286,
   "height": 186,
   "margin": 9,
-  "minfillerBytes": 4,
+  "minfillerLen": 32,
   "imgExtension": "png",
   "printTexts": true,
   "headerText": "PASS",

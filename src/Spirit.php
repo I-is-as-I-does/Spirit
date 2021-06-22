@@ -2,15 +2,19 @@
 /* This file is part of Spirit | SSITU | (c) 2021 I-is-as-I-does */
 namespace SSITU\Spirit;
 
-class Spirit
+class Spirit implements Spirit_i
 {
-    use \SSITU\Copperfield\FacadeOverload;
+    private $Reader;
+    private $Printer;
 
     private $Sod;
+    private $logs = [];
 
-    public function __construct()
+    public function __construct($Sod = null)
     {
-        $this->initOverload();
+        if ($Sod !== null) {
+            $this->setSod($Sod);
+        }
     }
 
     public function setSod($Sod)
@@ -24,39 +28,36 @@ class Spirit
 
     public function readImg($img, $spiritKey)
     {
-        if (empty($this->Sod)) {
-            $this->logs[] = 'Sod is not set';
+        if (empty($this->Reader)) {
+            $this->Reader = new Trades\Reader($this);
         }
-        if (!is_string($spiritKey)) {
-            $this->logs[] = 'spiritKey must be a string';
-        }
-        if (empty($this->logs)) {
-        
-            return $this->Reader()->read($img, $spiritKey);
-        }
-        return false;
+        return $this->Reader->read($img, $spiritKey);
     }
 
     public function printImg($dataToInject, $config)
     {
-        if (empty($this->Sod)) {
-            $this->logs[] = 'Sod is not set';
+        if (empty($this->Printer)) {
+            $this->Printer = new Trades\Printer($this);
         }
-        if (!is_string($dataToInject)) {
-            $this->logs[] = 'data to inject must be a string';
-        }
-        if (!is_array($config) || empty($config['width'])) {
-            $this->logs[] = 'invalid config';
-        }
-        if (empty($this->logs)) {
-            $this->config = $config;
-            return $this->Printer()->print($dataToInject);
-        }
-        return false;
+        return $this->Printer->print($dataToInject, $config);
     }
 
-    protected function getSod()
+    public function getLogs()
     {
+        return $this->logs;
+    }
+
+    public function record($log)
+    {
+        $this->logs[] = $log;
+    }
+
+    public function getSod()
+    {
+        if (empty($this->Sod)) {
+            $this->logs[] = 'Sod is not set';
+            return false;
+        }
         return $this->Sod;
     }
 
