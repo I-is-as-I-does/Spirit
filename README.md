@@ -6,7 +6,7 @@ Spirit Printer; steganography for 0 cents a copy!
 ## Getting started
 
 ```bash
-composer require ssitu/spirit
+$ composer require ssitu/spirit
 ```
 
 ## How to 
