@@ -23,7 +23,7 @@ class Reader
         }
 
         $this->setConfig($rscImg, $spiritKey);
-        if(!$this->setPlateParam()){
+        if(!$this->setPlateParam() || !$this->isValidKey($spiritKey)){
             return false;
         }
 
@@ -44,7 +44,7 @@ class Reader
 
         $decrypt = $this->Sod->decrypt($targdata);
         if ($decrypt === false) {
-            $this->Spirit->record($Sod->getLogs()[0]);
+            $this->Spirit->record($this->Sod->getLogs()[0]);
             return false;
         }
 

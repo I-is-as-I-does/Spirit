@@ -1,4 +1,3 @@
-
 # Spirit
 
 Spirit Printer; steganography for 0 cents a copy!
@@ -11,7 +10,7 @@ $ composer require ssitu/spirit
 
 Also requires Gd library enabled.
 
-## How to 
+## How to
 
 Demo available in `samples/`.
 
@@ -72,6 +71,11 @@ $printRslt = $Spirit->printImg($dataToInject, $printConfig);
 // returns decoded data
 $Spirit->readImg($printRslt['image'], $printRslt['key']);
 
+// If providing a key: it must consist of b64 characters only;
+// and length must match with the one specified in config
+$givenKey = 'Hf/mRnoh3mJDl8w+7DuhelTdHIWuj4V4';
+$printRslt = $Spirit->printImg($dataToInject, $printConfig, $givenKey);
+
 // Reading previously stored image
 $safelyStoredSpiritKey = 'nCLz32iG2hyu67lWCKBSFHeZw2qh1cFx';
 $Spirit->readImg('../samples/spirit-image.png', $safelyStoredSpiritKey);
@@ -85,25 +89,25 @@ $Spirit->getLogs();
 
 ![Spirit Duplicator](Spirit.jpg)
 
-Please note that Spirit has NOT been extensively tested; therefore, consider it a toy.  
+Please note that Spirit has NOT been extensively tested; therefore, consider it a toy.
 
-SSITU/Sod, or another encryption util – as long as it implements the same interface, is REQUIRED to run Spirit.  
+SSITU/Sod, or another encryption util – as long as it implements the same interface, is REQUIRED to run Spirit.
 
 Spirit MUST NOT be used to store sensitive data.  
-Permanent data loss WILL occurs, AT LEAST in those scenarii:  
+Permanent data loss WILL occurs, AT LEAST in those scenarii:
 
-- if either Spirit or Sod key gets lost or corrupted, even partially;  
-- if a run-time or an encryption error occurs;  
-- if libraries are no longer properly maintained.  
+- if either Spirit or Sod key gets lost or corrupted, even partially;
+- if a run-time or an encryption error occurs;
+- if libraries are no longer properly maintained.
 
 Both specified Sod key AND provided Spirit key are REQUIRED for future decryption;  
 Spirit key is only given ONCE, on successful image creation;  
 thus, Sod key and Spirit key MUST be stored in a safe place.  
 Spirit key SHOULD NOT be displayed publicly;  
-Sod key MUST NOT be displayed publicly.  
+Sod key MUST NOT be displayed publicly.
 
 A Spirit image can be duplicated and renamed at will;  
-However, a Spirit image MUST NOT be edited, compressed, resized, or saved in another format.  
+However, a Spirit image MUST NOT be edited, compressed, resized, or saved in another format.
 
 ## Contributing
 
@@ -112,4 +116,3 @@ Sure! You can take a loot at [CONTRIBUTING](CONTRIBUTING.md).
 ## License
 
 This project is under the MIT License; cf. [LICENSE](LICENSE) for details.
-

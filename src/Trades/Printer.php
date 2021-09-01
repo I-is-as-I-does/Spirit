@@ -24,19 +24,24 @@ class Printer
         }
     }
 
-    function print(string $dataToInject, array $config) {
+    function print(string $dataToInject, array $config, ?string $spiritKey = null) {
 
+       
         $this->config = $config;
         if (!$this->setPlateParam() || !$this->setSheetParam()) {
             return false;
         }
 
+        if(!empty($spiritKey) && !$this->isValidKey($spiritKey)){
+            return false;
+        }
+        
         $cryptdata = $this->Sod->encrypt($dataToInject);
         if ($cryptdata === false) {
             $this->Spirit->record($this->Sod->getLogs()[0]);
             return false;
         }
-
+ 
         $rscImg = $this->Paper->getRscImg();
         if (empty($rscImg)) {
             $this->Spirit->record('invalid-base-image');
@@ -47,20 +52,25 @@ class Printer
             $rscImg = $this->Stylus->writeTexts($rscImg);
         }
 
-        return $this->StegaData($rscImg, $cryptdata);
+        return $this->StegaData($rscImg, $cryptdata, $spiritKey);
     }
 
-    private function StegaData($rscImg, $cryptdata)
+ 
+    private function StegaData($rscImg, $cryptdata, $spiritKey = null)
     {
-
+        $cryptdata = rtrim($cryptdata, '=');
         $datalen = strlen($cryptdata);
         $info = Utils::adjustLen($this->poslen, $datalen);
-        $cryptdata = Utils::addrandPad($datalen, rtrim($cryptdata, '='));
         $randpoz = random_int($this->minfillerLen, $this->fillerLimit - $datalen);
         $filler = Utils::randFill($randpoz);
+         if(empty($spiritKey)){   
+         $spiritKey = substr($filler, -$this->keyLength);             
+        } else {
+          $filler = substr_replace($filler, $spiritKey, -$this->keyLength);
+        }
         $toinject = $filler . $info . $cryptdata;
         $toinject .= Utils::randFill($this->pxLimit - strlen($toinject));
-        $key = substr($filler, -$this->keyLength);
+   
         $binData = Utils::toBin($toinject);
         if (strlen($toinject) > $this->pxLimit) {
             $this->Spirit->record('too much data to inject in a too small img');
@@ -69,7 +79,7 @@ class Printer
         $rscImg = $this->rewritePx($rscImg, $binData);
         $out_b64img = Utils::rscTob64($rscImg, $this->imgExtension);
         imagedestroy($rscImg);
-        return ['image' => $out_b64img, 'key' => $key];
+        return ['image' => $out_b64img, 'key' => $spiritKey];
     }
 
     private function rewritePx($rscImg, $binData)
@@ -90,10 +100,6 @@ class Printer
             $binBlue = Utils::toBin($b);
             $leastBit = strlen($binBlue) - 1;
 
-            if (!array_key_exists($leastBit, str_split($binBlue))) {
-                echo 'x   ' . $x;
-                exit;
-            }
             $binBlue[$leastBit] = $binData[$x];
             $newBlue = Utils::toHex($binBlue);
 

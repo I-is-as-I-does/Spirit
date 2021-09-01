@@ -14,6 +14,16 @@ trait Plate
     private $poslen;
     private $encod_limits;
 
+    
+    private function isValidKey($spiritKey)
+    {
+       if(preg_match('/^[A-Za-z\d+\/]{'.$this->keyLength.'}$/',$spiritKey)){
+           return true;
+       }
+       $this->Spirit->record('invalid-key');
+       return false;
+    }
+
     private function setPlateParam()
     {
         $this->Sod = $this->Spirit->getSod();

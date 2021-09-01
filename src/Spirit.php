@@ -34,12 +34,12 @@ class Spirit implements Spirit_i
         return $this->Reader->read($img, $spiritKey);
     }
 
-    public function printImg($dataToInject, $config)
+    public function printImg($dataToInject, $config, $spiritKey = null)
     {
         if (empty($this->Printer)) {
             $this->Printer = new Trades\Printer($this);
         }
-        return $this->Printer->print($dataToInject, $config);
+        return $this->Printer->print($dataToInject, $config, $spiritKey);
     }
 
     public function getLogs()
